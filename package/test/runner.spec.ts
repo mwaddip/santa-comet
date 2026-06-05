@@ -43,9 +43,21 @@ describe("Box round-trip", () => {
 });
 
 describe("Transaction round-trip", () => {
+  // FINDING (2026-06-05, fleet @ master): all 17 corpus transactions error in
+  // fleet's deserializer. Verified mechanism (tx_466f1aef): readErgoTree
+  // (boxSerializer.ts) handles only the fee contract, P2PK, and size-flagged
+  // trees — a general-script output without the size bit throws "ErgoTree
+  // parsing without the size flag is not supported." The bytes are verbatim
+  // from fleet's own _test-vectors (JVM canonicalization changed nothing), so
+  // fleet's specs never deserialize these. The runner's faithful outcome is
+  // `errored` — fleet HAS a Transaction serializer; it rejected blessed bytes
+  // (a per-input divergence), which is not the kind-level `not-implemented`.
+  // This test pins the CLASSIFICATION, not the divergence: when fleet grows
+  // unsized-tree parsing, flip this to the round-trip assertion the other
+  // suites use. The corpus-wide grade lives in the e2e tally, not here.
   for (const e of fixture("Transaction").entries) {
-    it(`round-trips ${e.name}`, () => {
-      expect(runWireEntry(e)).toEqual({ bytes_hex: e.bytes_hex, error: null });
+    it(`faithfully reports fleet's parse rejection of ${e.name} as errored`, () => {
+      expect(runWireEntry(e)).toEqual({ bytes_hex: null, error: "errored" });
     });
   }
 });
