@@ -39,8 +39,11 @@ case "${1:-}" in
     ;;
   run)
     shift
+    if [ "$#" -lt 2 ]; then
+      echo "usage: dev run <vectors-dir> <out-dir>" >&2; exit 2
+    fi
     sync
     "$here/santa-run" "$impl_root" "$@"
     ;;
-  *) echo "usage: dev sync|test|run <vectors-dir> <out-dir>" >&2; exit 2 ;;
+  *) echo "usage: dev sync | dev test | dev run <vectors-dir> <out-dir>" >&2; exit 2 ;;
 esac
