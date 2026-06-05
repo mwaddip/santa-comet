@@ -21,7 +21,11 @@ sync() {
     # alive across syncs; the second rsync below owns that subtree.
     rsync -a --delete --exclude .git --exclude node_modules --exclude dist \
       --exclude /packages/santa-comet "${FLEET_IMPL%/}/" "$fleet/"
-  elif [ ! -d "$fleet/.git" ]; then
+  elif [ ! -d "$fleet" ]; then
+    # Clone only when no tree exists at all. A FLEET_IMPL-rsynced tree has no
+    # .git (excluded above), so guarding on .git would clone into a non-empty
+    # dir and fail. An existing clone is reused as-is (no pull — refresh via
+    # FLEET_IMPL or rm -rf .dev).
     git clone --depth 1 https://github.com/fleet-sdk/fleet.git "$fleet"
   fi
   rsync -a --delete --exclude node_modules --exclude dist \
