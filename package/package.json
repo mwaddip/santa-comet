@@ -1,0 +1,23 @@
+{
+  "name": "santa-comet",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Comet — SANTA wire-tier conformance runner over @fleet-sdk/serializer",
+  "scripts": {
+    "build": "tsc -p .",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fleet-sdk/serializer": "workspace:^",
+    "@fleet-sdk/crypto": "workspace:^"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "ajv": "^8.17.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
+  },
+  "engines": { "node": ">=18" }
+}

@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# dev sync|test|run — Comet's dev loop against a disposable .dev/fleet checkout.
+#
+# sync : ensure .dev/fleet exists (clone fleet-sdk/fleet#master, or rsync from a
+#        local checkout via FLEET_IMPL=/path/to/fleet — that tree is only ever
+#        read, never written), then rsync package/ in as packages/santa-comet.
+# test : sync + pnpm install + filtered build + vitest, all inside the workspace.
+# run  : sync + delegate to ./santa-run with .dev as the impl-path (so the real
+#        contract entrypoint is what gets exercised).
+#
+# Uses the ambient toolchain (node+pnpm on PATH) — mise lives ONLY in santa-run.
+set -euo pipefail
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+impl_root="$here/.dev"
+fleet="$impl_root/fleet"
+
+sync() {
+  mkdir -p "$impl_root"
+  if [ -n "${FLEET_IMPL:-}" ]; then
+    # --exclude /packages/santa-comet: keep our drop-in (and its node_modules)
+    # alive across syncs; the second rsync below owns that subtree.
+    rsync -a --delete --exclude .git --exclude node_modules --exclude dist \
+      --exclude /packages/santa-comet "${FLEET_IMPL%/}/" "$fleet/"
+  elif [ ! -d "$fleet/.git" ]; then
+    git clone --depth 1 https://github.com/fleet-sdk/fleet.git "$fleet"
+  fi
+  rsync -a --delete --exclude node_modules --exclude dist \
+    "$here/package/" "$fleet/packages/santa-comet/"
+}
+
+case "${1:-}" in
+  sync) sync ;;
+  test)
+    sync
+    cd "$fleet"
+    pnpm install --no-frozen-lockfile
+    pnpm --filter "santa-comet..." run build
+    pnpm --filter santa-comet test
+    ;;
+  run)
+    shift
+    sync
+    "$here/santa-run" "$impl_root" "$@"
+    ;;
+  *) echo "usage: dev sync|test|run <vectors-dir> <out-dir>" >&2; exit 2 ;;
+esac
