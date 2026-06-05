@@ -36,7 +36,10 @@ const NOT_IMPL: WireResult = Object.freeze({ bytes_hex: null, error: "not-implem
 /** Fleet's coverage-gap errors are untyped `Error`s — match its own message
  *  ("…type not implemented.", "SigmaProp operation not implemented."). Fragility
  *  is one-directional: a reword degrades toward errored/panicked (visible coal),
- *  never toward false-green. */
+ *  never toward false-green. The reverse miscategorization (a genuine fleet
+ *  failure whose message happens to contain "not implemented" landing as a
+ *  coverage gap instead of errored) shifts the coal BUCKET, never the verdict —
+ *  not-implemented never matches a blessed expected, so it's coal either way. */
 const isFleetNotImplemented = (err: unknown): boolean =>
   err instanceof Error && /not implemented/i.test(err.message);
 
