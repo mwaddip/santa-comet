@@ -41,3 +41,11 @@ describe("Box round-trip", () => {
     });
   }
 });
+
+describe("Transaction round-trip", () => {
+  for (const e of fixture("Transaction").entries) {
+    it(`round-trips ${e.name}`, () => {
+      expect(runWireEntry(e)).toEqual({ bytes_hex: e.bytes_hex, error: null });
+    });
+  }
+});

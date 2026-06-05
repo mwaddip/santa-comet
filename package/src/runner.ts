@@ -1,5 +1,11 @@
 import { hex } from "@fleet-sdk/crypto";
-import { SConstant, deserializeBox, serializeBox } from "@fleet-sdk/serializer";
+import {
+  SConstant,
+  deserializeBox,
+  deserializeTransaction,
+  serializeBox,
+  serializeTransaction
+} from "@fleet-sdk/serializer";
 
 /** One wire entry of a santa-wire/v1 vector (runner-contract-wire §1). The runner
  *  trusts the vector shape (schema-validated upstream); version is an input the
@@ -84,6 +90,10 @@ function runWireEntryInner(e: WireEntry): WireResult {
       // NOT deserializeEmbeddedBox (that's the in-transaction candidate form).
       // serializeBox without distinctTokenIds re-emits all fields incl. tx_id+index.
       return roundtrip(e, (b) => serializeBox(deserializeBox(b)).toBytes());
+    case "Transaction":
+      // ErgoLikeTransaction wire form (signed): inputs(+proofs) · dataInputs ·
+      // distinct tokenIds · outputs as embedded boxes.
+      return roundtrip(e, (b) => serializeTransaction(deserializeTransaction(b)).toBytes());
     default:
       // SigmaBoolean: fleet exposes no bare-SigmaBoolean entry point (its SigmaProp
       // data codec is ProveDlog-only, constants-embedded). Header: no serializer.
