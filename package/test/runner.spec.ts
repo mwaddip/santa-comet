@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { runWireEntry } from "../src/runner.js";
+import { runWireEntry, runWireVector } from "../src/runner.js";
 
 type Fixture = { entries: { name: string; kind: string; bytes_hex: string; version: { activated: number; ergoTree: number } }[] };
 
@@ -40,6 +40,69 @@ describe("Box round-trip", () => {
       expect(runWireEntry(e)).toEqual({ bytes_hex: e.bytes_hex, error: null });
     });
   }
+});
+
+describe("outcome mapping", () => {
+  const v = (over: Partial<{ name: string; kind: string; bytes_hex: string }>) => ({
+    name: "t",
+    kind: "Constant",
+    bytes_hex: "0400",
+    version: { activated: 2, ergoTree: 2 },
+    ...over
+  });
+
+  it("SigmaBoolean kind → not-implemented (no bare entry point in fleet)", () => {
+    for (const e of fixture("SigmaBoolean").entries) {
+      expect(runWireEntry(e)).toEqual({ bytes_hex: null, error: "not-implemented" });
+    }
+  });
+
+  it("unknown kind → not-implemented", () => {
+    expect(runWireEntry(v({ kind: "Header" }))).toEqual({
+      bytes_hex: null,
+      error: "not-implemented"
+    });
+  });
+
+  it("fleet's own 'not implemented' error → not-implemented (SigmaProp beyond ProveDlog)", () => {
+    // SSigmaProp constant (type 0x08) whose proposition byte is 0xce (ProveDHTuple),
+    // not 0xcd (ProveDlog) — fleet's dataSerializer throws "…type not implemented."
+    expect(runWireEntry(v({ bytes_hex: "08ce" }))).toEqual({
+      bytes_hex: null,
+      error: "not-implemented"
+    });
+  });
+
+  it("fleet codec throw without a gap message → errored", () => {
+    // Empty bytes: SConstant.from throws "Empty constant bytes." — a recognized
+    // codec rejection. (A committed vector can't be empty — schema forbids it —
+    // this pins the classifier, not a corpus case.)
+    expect(runWireEntry(v({ bytes_hex: "" }))).toEqual({ bytes_hex: null, error: "errored" });
+  });
+
+  it("malformed entry (bad hex) → panicked with note, run continues", () => {
+    const r = runWireEntry(v({ bytes_hex: "zz" }));
+    expect(r.bytes_hex).toBeNull();
+    expect(r.error).toBe("panicked");
+    expect(r.note).toBeTruthy();
+  });
+
+  it("totality: one result per entry, keyed by name, nothing aborts the file", () => {
+    const doc = {
+      schema: "santa-wire/v1",
+      op: "Mixed",
+      entries: [
+        v({ name: "good" }),
+        v({ name: "bad-hex", bytes_hex: "zz" }),
+        v({ name: "gap", kind: "SigmaBoolean" })
+      ]
+    };
+    const actuals = runWireVector(doc);
+    expect(Object.keys(actuals)).toEqual(["good", "bad-hex", "gap"]);
+    expect(actuals["good"]).toEqual({ bytes_hex: "0400", error: null });
+    expect(actuals["bad-hex"].error).toBe("panicked");
+    expect(actuals["gap"].error).toBe("not-implemented");
+  });
 });
 
 describe("Transaction round-trip", () => {
