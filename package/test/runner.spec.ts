@@ -14,3 +14,21 @@ describe("Constant round-trip", () => {
     });
   }
 });
+
+describe("echo-pin", () => {
+  // Fleet's readVLQ accepts non-minimal encodings (it just accumulates 7-bit
+  // groups), so SInt(0) padded as VLQ [0x80, 0x00] parses to 0 and re-serializes
+  // minimal: input 048000 → output 0400. If Constant round-trip ever returns the
+  // input-byte cache (SConstant's `.bytes` getter) instead of `.serialize()`,
+  // the output would echo 048000 and this test fails. Crafted input — committed
+  // corpus vectors are canonical, so they could never catch the echo.
+  it("re-serializes a non-minimal VLQ encoding to canonical bytes", () => {
+    const e = {
+      name: "echo-pin",
+      kind: "Constant",
+      bytes_hex: "048000",
+      version: { activated: 2, ergoTree: 2 }
+    };
+    expect(runWireEntry(e)).toEqual({ bytes_hex: "0400", error: null });
+  });
+});
