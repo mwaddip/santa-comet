@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# santa-run <impl-path> <vectors-dir> <out-dir> — emit actuals for the SANTA
+# orchestrator (runner-integration contract §3).
+#
+# SANTA owns the impl checkout: it clones runner.json's `impl`
+# (https://github.com/fleet-sdk/fleet.git#master) into a per-runner cache and
+# passes the containing dir as $1; our implementation under test is at $1/fleet.
+#
+# Fleet is a pnpm monorepo with workspace:^ inter-deps, which do not resolve from
+# outside the workspace — so Comet JOINS it: rsync package/ in as
+# packages/santa-comet/ (fleet's pnpm-workspace.yaml globs packages/*), install,
+# build the filtered dependency closure, run. Mutating the checkout is fine — it
+# is santa's disposable per-runner cache.
+#
+# Toolchain self-provisioned (mise.toml: node 22, pnpm 9) — re-exec once under
+# `mise exec` so node+pnpm are on PATH for the whole subtree. The orchestrator
+# stays toolchain-agnostic; `mise` on PATH is the one bootstrap dep. santa-run
+# trusts its own co-located config (toml and script live together — no new surface).
+set -euo pipefail
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -z "${SANTA_MISE_ACTIVE:-}" ]; then
+  mise trust "$here/mise.toml" >/dev/null
+  mise --cd "$here" install
+  exec env SANTA_MISE_ACTIVE=1 mise --cd "$here" exec -- "$0" "$@"
+fi
+# --- node + pnpm now on PATH ---
+impl="$(cd "$1" && pwd)"
+VECTORS="$(realpath "$2")"
+OUT="$(realpath -m "$3")"
+mkdir -p "$OUT"
+fleet="$impl/fleet"
+
+rsync -a --delete --exclude node_modules --exclude dist \
+  "$here/package/" "$fleet/packages/santa-comet/"
+cd "$fleet"
+# --no-frozen-lockfile is explicit: under CI=true pnpm defaults to frozen and
+# would refuse the lockfile-unknown workspace package we just dropped in.
+pnpm install --no-frozen-lockfile >/dev/null
+# Build comet + its workspace dependency closure (serializer → common, crypto),
+# topological order. Quoted: "..." is pnpm filter syntax, not a glob.
+pnpm --filter "santa-comet..." run build >/dev/null
+node packages/santa-comet/dist/runner.js "$VECTORS" "$OUT"
