@@ -1,0 +1,6 @@
+# Comet's toolchain, self-provisioned by santa-run (runner-integration contract §3).
+# pnpm 9: fleet's lockfileVersion is 9.0 (pnpm 9's native format), and pnpm 10's
+# build-script blocking requires interactive approval — wrong for a headless run.
+[tools]
+node = "22"
+pnpm = "9"

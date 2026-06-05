@@ -1,0 +1,8 @@
+{
+  "name": "comet",
+  "label": "comet (fleet-sdk · pure-TS)",
+  "version": "v5",
+  "tiers": ["wire"],
+  "cost": false,
+  "impl": "https://github.com/fleet-sdk/fleet.git#master"
+}
