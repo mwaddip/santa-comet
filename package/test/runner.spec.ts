@@ -66,7 +66,9 @@ describe("outcome mapping", () => {
 
   it("fleet's own 'not implemented' error → not-implemented (SigmaProp beyond ProveDlog)", () => {
     // SSigmaProp constant (type 0x08) whose proposition byte is 0xce (ProveDHTuple),
-    // not 0xcd (ProveDlog) — fleet's dataSerializer throws "…type not implemented."
+    // not 0xcd (ProveDlog): fleet's dataSerializer breaks without returning and falls
+    // to its bottom-of-function throw "Parsing error: '0x8' type not implemented."
+    // — the '0x8' is the SigmaProp TYPE code, not the 0xce proposition byte.
     expect(runWireEntry(v({ bytes_hex: "08ce" }))).toEqual({
       bytes_hex: null,
       error: "not-implemented"
@@ -84,7 +86,9 @@ describe("outcome mapping", () => {
     const r = runWireEntry(v({ bytes_hex: "zz" }));
     expect(r.bytes_hex).toBeNull();
     expect(r.error).toBe("panicked");
-    expect(r.note).toBeTruthy();
+    // Note carries fleet's hex error ("Error: Invalid byte sequence.") — pin
+    // diagnostic content, not just presence, so a swallowed message is visible.
+    expect(r.note).toMatch(/invalid/i);
   });
 
   it("totality: one result per entry, keyed by name, nothing aborts the file", () => {
