@@ -27,6 +27,11 @@ sync() {
     # dir and fail. An existing clone is reused as-is (no pull — refresh via
     # FLEET_IMPL or rm -rf .dev).
     git clone --depth 1 https://github.com/fleet-sdk/fleet.git "$fleet"
+  elif [ ! -f "$fleet/pnpm-workspace.yaml" ]; then
+    # Dir exists but isn't a fleet tree (interrupted clone/rsync) — fail loud
+    # here rather than confusingly at pnpm install.
+    echo "error: $fleet exists but is not a fleet tree — rm -rf .dev and retry" >&2
+    exit 1
   fi
   rsync -a --delete --exclude node_modules --exclude dist \
     "$here/package/" "$fleet/packages/santa-comet/"

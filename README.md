@@ -24,9 +24,9 @@ implementation under test is whatever checkout SANTA provides (`runner.json`'s
 
 Scope: `tiers: ["wire"]`, `version: v5`. Kinds: `Constant`, `Box`, `Transaction`
 dispatch to fleet's serializers; `SigmaBoolean` and `Header` are `not-implemented`
-— fleet exposes no bare-SigmaBoolean entry point (its SigmaProp codec is
-ProveDlog-only) and no header serializer. Honest coverage gaps, graded as coal
-by contract.
+— fleet exposes no bare-SigmaBoolean entry point (its SigmaProp data codec
+parses ProveDlog only, embedded in constants) and no header serializer. Honest
+coverage gaps, graded as coal by contract.
 
 ## Build / run
 
@@ -56,7 +56,7 @@ byte-identically. The honest gaps:
 | kind | grade | why |
 |---|---|---|
 | Box | 10/11 | `box_6` errored — same root cause as Transaction |
-| Constant | 175/178 | 3 × `not-implemented`: non-ProveDlog SigmaProp constants |
+| Constant | 175/178 | 3 × `not-implemented` — **finding:** SigmaProp constants (all ProveDlog). Fleet deserializes them fine, but its serialize side can't consume its own deserialized form (raw 33-byte point vs the nested `SConstant` the constructor API produces) and throws its "SigmaProp operation not implemented" gap error — a deserialize→serialize asymmetry that breaks `SConstant.from().serialize()` for every SigmaProp constant. |
 | Transaction | 0/17 errored | **finding:** fleet's `readErgoTree` parses only the fee contract, P2PK, and size-flagged trees; every corpus tx carries a general-script output without the size bit. The bytes are verbatim from fleet's own `_test-vectors` — fleet's specs never deserialize them. |
 | SigmaBoolean | 0/7 | `not-implemented` ×7 — no bare entry point |
 
