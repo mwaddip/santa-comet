@@ -34,6 +34,14 @@ describe("CLI", () => {
   });
 
   it("exits 2 without args", () => {
-    expect(() => execFileSync("node", [RUNNER], { stdio: "pipe" })).toThrowError();
+    // Pin the exact code: execFileSync throws on ANY non-zero exit, so a bare
+    // toThrowError() would also pass on an uncaught-crash exit 1.
+    let status: number | null = null;
+    try {
+      execFileSync("node", [RUNNER], { stdio: "pipe" });
+    } catch (e) {
+      status = (e as { status: number }).status;
+    }
+    expect(status).toBe(2);
   });
 });
