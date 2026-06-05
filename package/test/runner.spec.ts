@@ -44,7 +44,8 @@ describe("Box round-trip", () => {
 
 describe("Transaction round-trip", () => {
   // FINDING (2026-06-05, fleet @ master): all 17 corpus transactions error in
-  // fleet's deserializer. Verified mechanism (tx_466f1aef): readErgoTree
+  // fleet's deserializer — a corpus-level fact verified externally; this suite
+  // pins only the fixture entry's classification. Verified mechanism (tx_466f1aef): readErgoTree
   // (boxSerializer.ts) handles only the fee contract, P2PK, and size-flagged
   // trees — a general-script output without the size bit throws "ErgoTree
   // parsing without the size flag is not supported." The bytes are verbatim
