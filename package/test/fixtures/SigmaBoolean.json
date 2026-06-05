@@ -1,0 +1,29 @@
+{
+  "schema": "santa-wire/v1",
+  "op": "SigmaBoolean",
+  "blessed_by": "jvm:sigma-state-6.0.3",
+  "entries": [
+    {
+      "name": "prove-dlog-basic",
+      "kind": "SigmaBoolean",
+      "source": "ergots:fixture-gen/wire",
+      "description": "",
+      "bytes_hex": "cd000000000000000000000000000000000000000000000000000000000000000000",
+      "version": {
+        "activated": 2,
+        "ergoTree": 2
+      }
+    },
+    {
+      "name": "cand-two-leaves",
+      "kind": "SigmaBoolean",
+      "source": "ergots:fixture-gen/wire",
+      "description": "",
+      "bytes_hex": "9602cd000000000000000000000000000000000000000000000000000000000000000000cd000000000000000000000000000000000000000000000000000000000000000000",
+      "version": {
+        "activated": 2,
+        "ergoTree": 2
+      }
+    }
+  ]
+}

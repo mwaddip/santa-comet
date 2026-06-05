@@ -1,0 +1,51 @@
+{
+  "schema": "santa-wire/v1",
+  "op": "Constant",
+  "blessed_by": "jvm:sigma-state-6.0.3",
+  "entries": [
+    {
+      "name": "bool_0",
+      "kind": "Constant",
+      "source": "fleet:serializer/_test-vectors",
+      "description": "Fleet Constant bool_0",
+      "bytes_hex": "0101",
+      "version": {
+        "activated": 2,
+        "ergoTree": 2
+      }
+    },
+    {
+      "name": "bool_1",
+      "kind": "Constant",
+      "source": "fleet:serializer/_test-vectors",
+      "description": "Fleet Constant bool_1",
+      "bytes_hex": "0100",
+      "version": {
+        "activated": 2,
+        "ergoTree": 2
+      }
+    },
+    {
+      "name": "byte_0",
+      "kind": "Constant",
+      "source": "fleet:serializer/_test-vectors",
+      "description": "Fleet Constant byte_0",
+      "bytes_hex": "0201",
+      "version": {
+        "activated": 2,
+        "ergoTree": 2
+      }
+    },
+    {
+      "name": "byte_1",
+      "kind": "Constant",
+      "source": "fleet:serializer/_test-vectors",
+      "description": "Fleet Constant byte_1",
+      "bytes_hex": "0202",
+      "version": {
+        "activated": 2,
+        "ergoTree": 2
+      }
+    }
+  ]
+}
