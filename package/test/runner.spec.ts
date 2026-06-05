@@ -32,3 +32,12 @@ describe("echo-pin", () => {
     expect(runWireEntry(e)).toEqual({ bytes_hex: "0400", error: null });
   });
 });
+
+describe("Box round-trip", () => {
+  // sbox_minimal is ergots-sourced, box_0 fleet-sourced — one slice, two origins.
+  for (const e of fixture("Box").entries) {
+    it(`round-trips ${e.name}`, () => {
+      expect(runWireEntry(e)).toEqual({ bytes_hex: e.bytes_hex, error: null });
+    });
+  }
+});
