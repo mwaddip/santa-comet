@@ -6,6 +6,9 @@ import {
   serializeBox,
   serializeTransaction
 } from "@fleet-sdk/serializer";
+import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { basename, join } from "node:path";
+import { pathToFileURL } from "node:url";
 
 /** One wire entry of a santa-wire/v1 vector (runner-contract-wire §1). The runner
  *  trusts the vector shape (schema-validated upstream); version is an input the
@@ -108,4 +111,35 @@ export function runWireVector(doc: WireVector): Record<string, WireResult> {
   const actuals: Record<string, WireResult> = {};
   for (const e of doc.entries) actuals[e.name] = runWireEntry(e);
   return actuals;
+}
+
+// ---- CLI: runner <vectors-dir|vector.json> <out-dir> ----
+// Dir mode globs *.json one level deep — the orchestrator stages a runner's
+// selected vectors FLAT (symlinks), so nesting is invisible by contract. Sorted
+// for deterministic processing order; one actuals file per vector, same filename.
+function runFile(vecPath: string, outPath: string): void {
+  const doc = JSON.parse(readFileSync(vecPath, "utf8")) as WireVector;
+  writeFileSync(outPath, JSON.stringify(runWireVector(doc), null, 2));
+}
+
+function main(argv: string[]): void {
+  const input = argv[2];
+  const outDir = argv[3];
+  if (!input || !outDir) {
+    console.error("usage: runner <vectors-dir|vector.json> <out-dir>");
+    process.exit(2);
+  }
+  mkdirSync(outDir, { recursive: true });
+  const files = statSync(input).isDirectory()
+    ? readdirSync(input)
+        .filter((f) => f.endsWith(".json"))
+        .sort()
+        .map((f) => join(input, f))
+    : [input];
+  for (const f of files) runFile(f, join(outDir, basename(f)));
+}
+
+// Run only when invoked as the bin, not when imported by tests.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main(process.argv);
 }
