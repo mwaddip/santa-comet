@@ -28,7 +28,7 @@ export interface WireVector {
 
 /** One entry's faithful outcome (runner-contract-wire §2). Exactly one per entry:
  *    error null              → reserialized; bytes_hex present
- *    error "errored"         → fleet's codec threw on parse/reserialize
+ *    error "errored"         → fleet's codec threw on parse/reserialize; message in `reason`
  *    error "not-implemented" → no serializer for this kind reachable via fleet's
  *                              public API (or fleet's own explicit gap error)
  *    error "panicked"        → any other uncaught throw, caught so the run
@@ -36,6 +36,7 @@ export interface WireVector {
 export type WireResult = {
   bytes_hex: string | null;
   error: null | "errored" | "not-implemented" | "panicked";
+  reason?: string;
   note?: string;
 };
 
@@ -64,7 +65,12 @@ function roundtrip(e: WireEntry, fn: (bytes: Uint8Array) => Uint8Array): WireRes
     return { bytes_hex: hex.encode(fn(bytes)).toLowerCase(), error: null };
   } catch (err) {
     if (isFleetNotImplemented(err)) return NOT_IMPL;
-    return { bytes_hex: null, error: "errored" };
+    // Surface the throw's message so an `errored` round-trip is diagnosable (real
+    // codec divergence vs an unsupported shape), not an opaque bucket. `reason` is
+    // the diagnostic channel (tx-tier parity); `note` stays panic-only. Additive
+    // only — the verdict stays coal regardless.
+    const reason = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+    return { bytes_hex: null, error: "errored", reason };
   }
 }
 

@@ -79,7 +79,11 @@ describe("outcome mapping", () => {
     // Empty bytes: SConstant.from throws "Empty constant bytes." — a recognized
     // codec rejection. (A committed vector can't be empty — schema forbids it —
     // this pins the classifier, not a corpus case.)
-    expect(runWireEntry(v({ bytes_hex: "" }))).toEqual({ bytes_hex: null, error: "errored" });
+    const r = runWireEntry(v({ bytes_hex: "" }));
+    expect(r.bytes_hex).toBeNull();
+    expect(r.error).toBe("errored");
+    // The codec's message now rides in `reason` (diagnostic, never graded).
+    expect(r.reason).toMatch(/empty/i);
   });
 
   it("malformed entry (bad hex) → panicked with note, run continues", () => {
@@ -125,7 +129,11 @@ describe("Transaction round-trip", () => {
   // suites use. The corpus-wide grade lives in the e2e tally, not here.
   for (const e of fixture("Transaction").entries) {
     it(`faithfully reports fleet's parse rejection of ${e.name} as errored`, () => {
-      expect(runWireEntry(e)).toEqual({ bytes_hex: null, error: "errored" });
+      const r = runWireEntry(e);
+      expect(r.bytes_hex).toBeNull();
+      expect(r.error).toBe("errored");
+      // fleet's rejection message (e.g. the unsized-tree error) rides in `reason`.
+      expect(r.reason).toBeTruthy();
     });
   }
 });
