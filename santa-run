@@ -39,4 +39,6 @@ pnpm install --no-frozen-lockfile >/dev/null
 # Build comet + its workspace dependency closure (serializer → common, crypto),
 # topological order. Quoted: "..." is pnpm filter syntax, not a glob.
 pnpm --filter "santa-comet..." run build >/dev/null
-${SANTA_BOUND:+"$SANTA_BOUND"} node packages/santa-comet/dist/runner.js "$VECTORS" "$OUT"
+# --max-old-space-size: node sizes V8's heap to about half its cgroup's memory, so inside a bounded unit a row within
+# the budget would abort at the heap limit (graded panicked); a large ceiling leaves the bound to the cgroup.
+${SANTA_BOUND:+"$SANTA_BOUND"} node --max-old-space-size=65536 packages/santa-comet/dist/runner.js "$VECTORS" "$OUT"
