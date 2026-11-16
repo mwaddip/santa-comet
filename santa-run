@@ -39,4 +39,4 @@ pnpm install --no-frozen-lockfile >/dev/null
 # Build comet + its workspace dependency closure (serializer → common, crypto),
 # topological order. Quoted: "..." is pnpm filter syntax, not a glob.
 pnpm --filter "santa-comet..." run build >/dev/null
-node packages/santa-comet/dist/runner.js "$VECTORS" "$OUT"
+${SANTA_BOUND:+"$SANTA_BOUND"} node packages/santa-comet/dist/runner.js "$VECTORS" "$OUT"
