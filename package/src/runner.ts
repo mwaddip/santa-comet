@@ -104,9 +104,11 @@ function runWireEntryInner(e: WireEntry): WireResult {
       // distinct tokenIds · outputs as embedded boxes.
       return roundtrip(e, (b) => serializeTransaction(deserializeTransaction(b)).toBytes());
     default:
-      // SigmaBoolean: fleet exposes no bare-SigmaBoolean entry point (its SigmaProp
-      // data codec is ProveDlog-only, constants-embedded). Header: no serializer.
-      // A faithful coverage gap, never a silent skip (runner-contract-wire §5).
+      // A kind outside runner.json's declared `kinds` (SigmaBoolean, Header, ErgoTree,
+      // BlockTransactions: fleet has no entry point for them) is not staged by conform
+      // (SANTA runner-integration §2). One reaching this runner anyway (a direct
+      // santa-run over other vectors) is a coverage gap, never a silent skip
+      // (runner-contract-wire §5).
       return NOT_IMPL;
   }
 }
