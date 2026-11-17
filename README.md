@@ -22,11 +22,21 @@ then `pnpm install` + a filtered build resolve everything natively. The
 implementation under test is whatever checkout SANTA provides (`runner.json`'s
 `impl`: `fleet-sdk/fleet#master`).
 
-Scope: `tiers: ["wire"]`, `version: v5`. Kinds: `Constant`, `Box`, `Transaction`
-dispatch to fleet's serializers; `SigmaBoolean` and `Header` are `not-implemented`
-— fleet exposes no bare-SigmaBoolean entry point (its SigmaProp data codec
-parses ProveDlog only, embedded in constants) and no header serializer. Honest
-coverage gaps, graded as coal by contract.
+## Scope
+
+Comet is graded on Fleet's **public API, at full depth**: anything Fleet exports
+and a user could call. A failure there on bytes the node produces is coal (e.g.
+`deserializeTransaction` refusing an unsized ErgoTree), a gap to fix in Fleet.
+What Fleet's API does not offer at all is declared out of scope in `runner.json`
+(SANTA runner-integration §2), each with its reason:
+
+| `runner.json` | declares | why |
+|---|---|---|
+| `tiers: ["wire"]`, `version: "v5"`, `cost: false` | serialization only, v5 | Fleet is a serialization / transaction-building SDK: it evaluates no script (its compiler and mock chain delegate to sigmastate-js), and its type system has no v6 data types (`UnsignedBigInt`, `Header`, `Option` constants). |
+| `kinds: ["Constant", "Box", "Transaction"]` | the wire kinds graded | Fleet's serializer covers constants (`SConstant`), boxes and transactions. It parses no ErgoTree body (its `ErgoTree` class reads the header, constants and template, never the body), and has no bare `SigmaBoolean`, `Header` or block-transactions entry point. |
+| `activation: false` | no rule tied to the activated script version | Fleet has no notion of the activated version: it does not validate consensus, so refusing a box whose tree is above it is the node's job. |
+
+Kinds `Constant`, `Box`, `Transaction` dispatch to fleet's serializers.
 
 ## Build / run
 

@@ -4,5 +4,7 @@
   "version": "v5",
   "tiers": ["wire"],
   "cost": false,
+  "kinds": ["Constant", "Box", "Transaction"],
+  "activation": false,
   "impl": "https://github.com/fleet-sdk/fleet.git#master"
 }
