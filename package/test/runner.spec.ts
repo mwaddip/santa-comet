@@ -137,3 +137,16 @@ describe("Transaction round-trip", () => {
     });
   }
 });
+
+describe("a schema the runner was not written for", () => {
+  // SANTA runner-integration §3: a newer version of santa-wire, a tier this runner does not mount, or no schema at
+  // all answers the tier-neutral not-implemented for every entry, and is never read as santa-wire/v1 (here an entry
+  // the wire arm would happily round-trip): a new envelope read as an old one shows as false divergences.
+  const e = fixture("Constant").entries[0];
+  for (const schema of ["santa-wire/v2", "santa-eval/v2", undefined]) {
+    it(`answers not-implemented for ${schema ?? "no schema"}`, () => {
+      const doc = { ...(schema === undefined ? {} : { schema }), op: "x", entries: [e] };
+      expect(runWireVector(doc as Parameters<typeof runWireVector>[0])).toEqual({ [e.name]: { error: "not-implemented" } });
+    });
+  }
+});

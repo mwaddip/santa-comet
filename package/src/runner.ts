@@ -113,11 +113,19 @@ function runWireEntryInner(e: WireEntry): WireResult {
   }
 }
 
+/** The tier-neutral not-implemented (SANTA runner-integration §3): this runner's answer for every entry of a vector
+ *  whose schema it was not written for, since it cannot know that schema's actual shape. */
+export type NotImplemented = { error: "not-implemented" };
+
 /** run(vector) → actuals: exactly one result per entry, keyed by name, insertion
- *  order = entry order (deterministic — no clocks, no RNG, no ambient state). */
-export function runWireVector(doc: WireVector): Record<string, WireResult> {
-  const actuals: Record<string, WireResult> = {};
-  for (const e of doc.entries) actuals[e.name] = runWireEntry(e);
+ *  order = entry order (deterministic — no clocks, no RNG, no ambient state). Only santa-wire/v1, by exact name
+ *  and version, is read as a wire vector: any other schema (a newer version, a tier this runner does not mount, or
+ *  none) is not-implemented for every entry, never read as santa-wire/v1 (a new envelope read as an old one shows
+ *  as false divergences). */
+export function runWireVector(doc: WireVector): Record<string, WireResult | NotImplemented> {
+  const known = doc.schema === "santa-wire/v1";
+  const actuals: Record<string, WireResult | NotImplemented> = {};
+  for (const e of doc.entries) actuals[e.name] = known ? runWireEntry(e) : { error: "not-implemented" };
   return actuals;
 }
 
