@@ -110,5 +110,6 @@ await mainRun(rj, tree, out, () => { throw new Error("bounded only"); }, () => [
     const pid = readFileSync(join(d, "child.pid"), "utf8").trim();
     const zombieOrGone = !existsSync(`/proc/${pid}/stat`) || readFileSync(`/proc/${pid}/stat`, "utf8").split(")").pop()!.trim().startsWith("Z");
     expect(zombieOrGone, "the grandchild outlived its runner").toBe(true);
+    expect(existsSync(join(d, "out", ".children")), "the interrupted run left .children/").toBe(false);
   }, 60_000);
 });

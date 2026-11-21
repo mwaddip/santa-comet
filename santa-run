@@ -29,8 +29,7 @@ fi
 # --- node + pnpm now on PATH ---
 impl="$(cd "$1" && pwd)"
 SANTA="$(realpath "$2")"
-OUT="$(realpath -m "$3")"
-mkdir -p "$OUT"
+OUT="$(realpath -m "$3")"   # the runner makes it, after it has checked the out-dir is allowed (§3)
 fleet="$impl/fleet"
 
 rsync -a --delete --exclude node_modules --exclude dist \
