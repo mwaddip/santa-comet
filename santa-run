@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# santa-run <impl-path> <vectors-dir> <out-dir> — emit actuals for the SANTA
-# orchestrator (runner-integration contract §3).
+# santa-run <impl-path> <santa-dir> <out-dir> — Comet as a self-contained runner (SANTA's runner-integration §3):
+# `runner.js run` checks its grader (src/harness/) and selection against the SANTA checkout's oracles, selects by
+# runner.json, runs and grades every selected file, and writes results.json and actuals/.
 #
 # SANTA owns the impl checkout: it clones runner.json's `impl`
 # (https://github.com/fleet-sdk/fleet.git#master) into a per-runner cache and
@@ -21,11 +22,13 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ -z "${SANTA_MISE_ACTIVE:-}" ]; then
   mise trust "$here/mise.toml" >/dev/null
   mise --cd "$here" install
-  exec env SANTA_MISE_ACTIVE=1 mise --cd "$here" exec -- "$0" "$@"
+  # `mise --cd` changes the working directory: resolve the three paths (and this script) first
+  set -- "$(realpath "$1")" "$(realpath "$2")" "$(realpath -m "$3")"
+  exec env SANTA_MISE_ACTIVE=1 mise --cd "$here" exec -- "$here/$(basename "$0")" "$@"
 fi
 # --- node + pnpm now on PATH ---
 impl="$(cd "$1" && pwd)"
-VECTORS="$(realpath "$2")"
+SANTA="$(realpath "$2")"
 OUT="$(realpath -m "$3")"
 mkdir -p "$OUT"
 fleet="$impl/fleet"
@@ -39,6 +42,6 @@ pnpm install --no-frozen-lockfile >/dev/null
 # Build comet + its workspace dependency closure (serializer → common, crypto),
 # topological order. Quoted: "..." is pnpm filter syntax, not a glob.
 pnpm --filter "santa-comet..." run build >/dev/null
-# --max-old-space-size: node sizes V8's heap to about half its cgroup's memory, so inside a bounded unit a row within
-# the budget would abort at the heap limit (graded panicked); a large ceiling leaves the bound to the cgroup.
-${SANTA_BOUND:+"$SANTA_BOUND"} node --max-old-space-size=65536 packages/santa-comet/dist/runner.js "$VECTORS" "$OUT"
+# --max-old-space-size: a bounded file's child runs under the same flags, and V8's own default heap limit could
+# stop a row within its budget; a large ceiling leaves the bound to the watchdog (src/harness/bounds.ts).
+node --max-old-space-size=65536 packages/santa-comet/dist/runner.js run "$here/runner.json" "$SANTA" "$OUT"

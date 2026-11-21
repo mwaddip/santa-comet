@@ -42,20 +42,43 @@ Kinds `Constant`, `Box`, `Transaction` dispatch to fleet's serializers.
 
 ```bash
 # dev loop (ambient node+pnpm; mise only lives in santa-run):
-FLEET_IMPL=~/projects/fleet ./dev test     # sync → install → build → vitest
-./dev run <vectors-dir> <out-dir>          # exercise the real santa-run path
+SANTA_DIR=~/projects/santa FLEET_IMPL=~/projects/fleet ./dev test   # sync → install → build → vitest
+./dev run <santa-dir> <out-dir>            # exercise the real santa-run path
 
-# what the orchestrator calls (runner-integration contract §3):
-./santa-run <impl-path> <vectors-dir> <out-dir>
+# what SANTA's conform calls (runner-integration §3):
+./santa-run <impl-path> <santa-dir> <out-dir>
 ```
 
-## SANTA integration (wiring steps, santa-side)
+## A self-contained runner
 
-1. Push this repo to GitHub.
-2. In santa: `git submodule add <url> runners/comet` — `./conform` discovers it
-   (presence-as-state: `runner.json` + executable `santa-run`).
-3. Scoreboard: wire slices grade with the shared comparator; nothing
-   comet-specific to configure.
+Comet runs as a self-contained runner (SANTA's `docs/contract/runner-integration.md` §3): given a SANTA checkout, it
+checks its own grader and selection against the checkout's `oracle/`, selects the vector files its `runner.json` declares,
+runs each through Fleet, grades every entry by `vectors/grading.json` and writes `results.json` and `actuals/<rel>`.
+SANTA's conform reads those, re-grades the actuals with its own grader (the canary) and puts the row on the board.
+
+The machinery is in [`package/src/harness/`](package/src/harness/), and it is meant to be copied: it uses Node's
+standard library only, nothing from Fleet. A TypeScript runner for another implementation takes the directory as it is
+and supplies one function, its per-file function: a vector file's path and parsed document → its actuals by entry name.
+
+| file | what it does |
+|---|---|
+| `grading.ts` | the grading language (`santa-grading/v1`): a strict parser and the interpreter |
+| `selection.ts` | `runner.json`'s scope (refused as conform refuses it) and selection |
+| `oracle.ts` | the self-checks against `oracle/` (every verdict case, every selection case) |
+| `bounds.ts` | the bounded-file watchdog (§3a): a child per `limits` file in its own process group, killed past `memory_mb` or `wall_s`; Linux only |
+| `results.ts` | `results.json` (`santa-runner-results/v1`) |
+| `run.ts` | the verbs: `mainRun` (`run <runner.json> <santa-dir> <out-dir>`) and `mainOne` (`one <santa-dir> <relpath> <out-file>`, a bounded file's child, which writes its own peak to `<out-file>.peak`) |
+
+[`package/src/runner.ts`](package/src/runner.ts) shows the wiring: the per-file function, the child's command (this
+same script under the same Node flags, as `one`), and the two verbs. The tests in
+[`package/test/harness/`](package/test/harness/) come along with it; they need only vitest and a SANTA checkout
+(`SANTA_DIR`), not Fleet.
+
+## SANTA integration
+
+SANTA carries this repo as the submodule `runners/comet`; its `./conform` finds it there (presence-as-state:
+`runner.json` + an executable `santa-run`) and calls `santa-run` with Fleet's checkout, the SANTA checkout and an
+output directory.
 
 ## Status
 

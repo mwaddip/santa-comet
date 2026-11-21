@@ -6,7 +6,8 @@
 #        read, never written), then rsync package/ in as packages/santa-comet.
 # test : sync + pnpm install + filtered build + vitest, all inside the workspace.
 # run  : sync + delegate to ./santa-run with .dev as the impl-path (so the real
-#        contract entrypoint is what gets exercised).
+#        contract entrypoint is what gets exercised): dev run <santa-dir> <out-dir>.
+# The harness tests read a SANTA checkout's oracle/ and vectors/: SANTA_DIR=<santa> ./dev test.
 #
 # Uses the ambient toolchain (node+pnpm on PATH) — mise lives ONLY in santa-run.
 set -euo pipefail
@@ -49,10 +50,10 @@ case "${1:-}" in
   run)
     shift
     if [ "$#" -lt 2 ]; then
-      echo "usage: dev run <vectors-dir> <out-dir>" >&2; exit 2
+      echo "usage: dev run <santa-dir> <out-dir>" >&2; exit 2
     fi
     sync
     "$here/santa-run" "$impl_root" "$@"
     ;;
-  *) echo "usage: dev sync | dev test | dev run <vectors-dir> <out-dir>" >&2; exit 2 ;;
+  *) echo "usage: dev sync | dev test | dev run <santa-dir> <out-dir>" >&2; exit 2 ;;
 esac

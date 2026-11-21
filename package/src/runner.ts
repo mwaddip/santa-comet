@@ -8,7 +8,10 @@ import {
 } from "@fleet-sdk/serializer";
 import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import type { Budget } from "./harness/bounds.js";
+import type { Json } from "./harness/grading.js";
+import { type RunFile, mainOne, mainRun } from "./harness/run.js";
 
 /** One wire entry of a santa-wire/v1 vector (runner-contract-wire §1). The runner
  *  trusts the vector shape (schema-validated upstream); version is an input the
@@ -129,20 +132,33 @@ export function runWireVector(doc: WireVector): Record<string, WireResult | NotI
   return actuals;
 }
 
-// ---- CLI: runner <vectors-dir|vector.json> <out-dir> ----
-// Dir mode globs *.json one level deep — the orchestrator stages a runner's
-// selected vectors FLAT (symlinks), so nesting is invisible by contract. Sorted
-// for deterministic processing order; one actuals file per vector, same filename.
+// ---- CLI ----
+//   runner run <runner.json> <santa-dir> <out-dir>   the self-contained runner (SANTA runner-integration §3), through
+//                                                    the harness (src/harness/): oracle checks, selection, grading,
+//                                                    results.json + actuals/
+//   runner one <santa-dir> <relpath> <out-file>      a bounded file's child (runner-integration §3a)
+//   runner <vectors-dir|vector.json> <out-dir>       one actuals file per vector, same filename (a local look)
+
+/** The per-file function the harness calls: one santa-wire/v1 document → its actuals. */
+const perFile: RunFile = (_path, doc) => runWireVector(doc as unknown as WireVector) as unknown as Record<string, Json>;
+
+/** A bounded file's child: this same runner, under the same Node flags, as `one`. */
+const child = (santa: string) => (_b: Budget, rel: string, out: string): string[] =>
+  [process.execPath, ...process.execArgv, fileURLToPath(import.meta.url), "one", santa, rel, out];
+
 function runFile(vecPath: string, outPath: string): void {
   const doc = JSON.parse(readFileSync(vecPath, "utf8")) as WireVector;
   writeFileSync(outPath, JSON.stringify(runWireVector(doc), null, 2));
 }
 
 function main(argv: string[]): void {
+  const fail = (e: unknown): never => { console.error(`comet: ${(e as Error).message}`); process.exit(1); };
+  if (argv[2] === "run" && argv.length === 6) { mainRun(argv[3], argv[4], argv[5], perFile, child(argv[4])).catch(fail); return; }
+  if (argv[2] === "one" && argv.length === 6) { mainOne(argv[3], argv[4], argv[5], perFile).catch(fail); return; }
   const input = argv[2];
   const outDir = argv[3];
-  if (!input || !outDir) {
-    console.error("usage: runner <vectors-dir|vector.json> <out-dir>");
+  if (!input || !outDir || argv.length !== 4) {
+    console.error("usage: runner run <runner.json> <santa-dir> <out-dir> | one <santa-dir> <relpath> <out-file> | <vectors-dir|vector.json> <out-dir>");
     process.exit(2);
   }
   mkdirSync(outDir, { recursive: true });
