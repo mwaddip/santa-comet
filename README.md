@@ -65,15 +65,18 @@ and supplies one function, its per-file function: a vector file's path and parse
 | `grading.ts` | the grading language (`santa-grading/v1`): a strict parser and the interpreter |
 | `selection.ts` | `runner.json`'s scope (refused as conform refuses it) and selection |
 | `oracle.ts` | the self-checks against `oracle/` (every verdict case, every selection case) |
-| `bounds.ts` | the bounded-file watchdog (§3a): a child per `limits` file in its own process group, killed past `memory_mb` or `wall_s`; Linux only |
+| `bounds.ts` | the bounded-file watchdog (§3a): a child per `limits` file in its own process group, killed past `memory_mb` or `wall_s`; an interrupted runner (SIGINT, SIGTERM, SIGHUP) kills the child's group first, then dies of the signal; Linux only |
 | `results.ts` | `results.json` (`santa-runner-results/v1`) |
-| `run.ts` | the verbs: `mainRun` (`run <runner.json> <santa-dir> <out-dir>`) and `mainOne` (`one <santa-dir> <relpath> <out-file>`, a bounded file's child, which writes its own peak to `<out-file>.peak`) |
+| `run.ts` | the verbs: `mainRun` (`run <runner.json> <santa-dir> <out-dir>`; it first removes the out-dir's `results.json` and `actuals/`, so a failed run leaves no earlier results) and `mainOne` (`one <santa-dir> <relpath> <out-file>`, a bounded file's child, which writes its own peak to `<out-file>.peak`) |
 
 [`package/src/runner.ts`](package/src/runner.ts) shows the wiring: the per-file function, the child's command (this
 same script under the same Node flags, as `one`), and the two verbs. The tests in
 [`package/test/harness/`](package/test/harness/) come along with it (the whole directory: `santa.ts` and
 `results-shape.ts` are helpers the specs import); they need only vitest and a SANTA checkout (`SANTA_DIR`), not Fleet,
-and `npm run typecheck` checks them with the source (`tsconfig.test.json`).
+and `npm run typecheck` checks them with the source (`tsconfig.test.json`). `oracle.spec.ts` and `run.spec.ts`
+read the SANTA checkout when they load and fail without one, by design (a skipped oracle check would pass silently): a
+host whose plain `npm test` must not need a checkout leaves those two out of it unless `SANTA_DIR` is set, and runs
+them in a step of its own.
 
 One limit of the port: `JSON.parse` reads every number as a double, so two integers beyond 2^53 that differ can compare
 equal here where SANTA's santa-check (exact 64-bit integers) tells them apart. SANTA's vectors keep such values in
