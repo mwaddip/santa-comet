@@ -153,11 +153,12 @@ function runFile(vecPath: string, outPath: string): void {
 
 function main(argv: string[]): void {
   const fail = (e: unknown): never => { console.error(`comet: ${(e as Error).message}`); process.exit(1); };
+  const verb = argv[2] === "run" || argv[2] === "one";
   if (argv[2] === "run" && argv.length === 6) { mainRun(argv[3], argv[4], argv[5], perFile, child(argv[4])).catch(fail); return; }
   if (argv[2] === "one" && argv.length === 6) { mainOne(argv[3], argv[4], argv[5], perFile).catch(fail); return; }
   const input = argv[2];
   const outDir = argv[3];
-  if (!input || !outDir || argv.length !== 4) {
+  if (verb || !input || !outDir || argv.length !== 4) {
     console.error("usage: runner run <runner.json> <santa-dir> <out-dir> | one <santa-dir> <relpath> <out-file> | <vectors-dir|vector.json> <out-dir>");
     process.exit(2);
   }

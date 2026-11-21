@@ -35,12 +35,19 @@ describe("the bounded-file watchdog", () => {
     expect(await run(s, 1024, 30)).toEqual({ kind: "finished" });
     const [pid, pgid] = readFileSync(join(dirname(s), "ids"), "utf8").trim().split(" ");
     expect(pgid).toBe(pid);
-    expect(pgid).not.toBe(String(process.getpgid?.(0) ?? readFileSync("/proc/self/stat", "utf8").split(")").pop()!.trim().split(" ")[2]));
+    expect(pgid).not.toBe(readFileSync("/proc/self/stat", "utf8").split(")").pop()!.trim().split(" ")[2]);
   });
 
   it("a child's grandchild dies with its group", async () => {
     const s = script("grandchild", `sleep 30 &\necho $! > "$(dirname "$0")/child.pid"\nsleep 30`);
     expect(await run(s, 1024, 1)).toEqual({ kind: "exceeded", limit: "time" });
+    await new Promise((r) => setTimeout(r, 200));
+    expect(alive(readFileSync(join(dirname(s), "child.pid"), "utf8"))).toBe(false);
+  });
+
+  it("a child that exits at once takes what it left in its group with it", async () => {
+    const s = script("prompt", `sleep 30 &\necho $! > "$(dirname "$0")/child.pid"`);
+    expect(await run(s, 1024, 30)).toEqual({ kind: "finished" });
     await new Promise((r) => setTimeout(r, 200));
     expect(alive(readFileSync(join(dirname(s), "child.pid"), "utf8"))).toBe(false);
   });

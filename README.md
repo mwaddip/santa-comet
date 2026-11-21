@@ -71,8 +71,13 @@ and supplies one function, its per-file function: a vector file's path and parse
 
 [`package/src/runner.ts`](package/src/runner.ts) shows the wiring: the per-file function, the child's command (this
 same script under the same Node flags, as `one`), and the two verbs. The tests in
-[`package/test/harness/`](package/test/harness/) come along with it; they need only vitest and a SANTA checkout
-(`SANTA_DIR`), not Fleet.
+[`package/test/harness/`](package/test/harness/) come along with it (the whole directory: `santa.ts` and
+`results-shape.ts` are helpers the specs import); they need only vitest and a SANTA checkout (`SANTA_DIR`), not Fleet,
+and `npm run typecheck` checks them with the source (`tsconfig.test.json`).
+
+One limit of the port: `JSON.parse` reads every number as a double, so two integers beyond 2^53 that differ can compare
+equal here where SANTA's santa-check (exact 64-bit integers) tells them apart. SANTA's vectors keep such values in
+strings, so no comparison in the corpus reaches it; the canary would show it if one did.
 
 ## SANTA integration
 

@@ -31,6 +31,19 @@ describe("the oracle checks", () => {
     expect(() => checkOracles(fake, grading())).toThrow(first.name as string);
   });
 
+  it("refuse an oracle file without its cases or files", () => {
+    for (const [body, why] of [
+      [`{"schema": "santa-oracle-grading/v1"}`, "no cases"],
+      [`{"schema": "santa-oracle-selection/v1", "cases": []}`, "no files"],
+      [`{"schema": "santa-oracle-selection/v1", "files": []}`, "no cases"],
+    ]) {
+      const fake = temp("empty");
+      mkdirSync(join(fake, "oracle"));
+      writeFileSync(join(fake, "oracle/x.json"), body);
+      expect(() => checkOracles(fake, grading()), body).toThrow(why);
+    }
+  });
+
   it("refuse an unknown oracle schema", () => {
     const fake = temp("unknown");
     mkdirSync(join(fake, "oracle"));

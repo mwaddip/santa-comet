@@ -71,6 +71,8 @@ export async function mainRun(runnerJson: string, santa: string, out: string, ru
         throw new Error(`vectors/${f.rel}: a bounded file needs Linux (the watchdog reads /proc); this platform cannot bound it`);
       actuals = await runBounded(f, doc, b, children, n, child);
     } else actuals = await runFile(join(vectors, f.rel), doc);
+    // graded as written: the JSON the canary re-grades (an `undefined` field is absent there, a NaN is null)
+    actuals = JSON.parse(JSON.stringify(actuals)) as Record<string, Json>;
     writeJson(join(out, "actuals", f.rel), actuals);
     const label = grading.labelFor(f.tier, doc);
     tally.addFile(f);

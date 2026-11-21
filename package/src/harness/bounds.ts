@@ -68,7 +68,9 @@ function outOfMemory(code: number, said: string): boolean {
  *  after a clean exit. */
 export function runChild(cmd: string[], b: Budget, stderr: string, peakReport: string | null): Promise<Outcome> {
   const fd = openSync(stderr, "w");
-  const bash = spawn("bash", ["-c", 'set -m; ulimit -d "$1"; shift; "$@" & wait $!', "bash", String(backstopMb(b) * 1024), ...cmd],
+  // after the child, bash kills what it left in its group (the group outlives its reaped leader while it has members)
+  const wrapper = 'set -m; ulimit -d "$1"; shift; "$@" & c=$!; wait $c; s=$?; kill -KILL -- -$c 2>/dev/null; exit $s';
+  const bash = spawn("bash", ["-c", wrapper, "bash", String(backstopMb(b) * 1024), ...cmd],
     { stdio: ["ignore", "ignore", fd] });
   closeSync(fd);
   const deadline = Date.now() + b.wallS * 1000;
@@ -94,7 +96,6 @@ export function runChild(cmd: string[], b: Budget, stderr: string, peakReport: s
     bash.on("error", (e) => { clearInterval(timer); resolve({ kind: "crashed", note: `cannot start the bounded child: ${e.message}` }); });
     bash.on("exit", (code, signal) => {
       clearInterval(timer);
-      if (child !== null) killGroup(child); // anything the child left in its group
       if (verdict !== null) return resolve(verdict);
       const status = code ?? 128 + (signal === null ? 0 : constants.signals[signal]);
       if (status === 0) {

@@ -7,7 +7,13 @@ import { dirname, join } from "node:path";
 import { Grading, type Json, type JsonObject, isObject, structuralEqual, verdictJson } from "./grading.js";
 import { discover, parseScope, select } from "./selection.js";
 
-const cases = (doc: JsonObject): JsonObject[] => (Array.isArray(doc.cases) ? doc.cases.filter(isObject) : []);
+/** The file's list under `key`, refused when absent: an oracle without cases would pass vacuously. */
+const list = (doc: JsonObject, key: "cases" | "files"): JsonObject[] => {
+  const v = doc[key];
+  if (!Array.isArray(v)) throw new Error(`no ${key}`);
+  return v.filter(isObject);
+};
+const cases = (doc: JsonObject): JsonObject[] => list(doc, "cases");
 
 /** One verdict case: its label, entry, file (default {}), actual (null = missing) and cost claim (default false). */
 function verdicts(doc: JsonObject, g: Grading): void {
@@ -31,7 +37,7 @@ function selections(doc: JsonObject): void {
   const root = mkdtempSync(join(tmpdir(), "santa-selection-"));
   try {
     const vectors = join(root, "vectors");
-    for (const f of Array.isArray(doc.files) ? doc.files.filter(isObject) : []) {
+    for (const f of list(doc, "files")) {
       const rel = typeof f.path === "string" ? f.path : "";
       const path = join(vectors, rel);
       mkdirSync(dirname(path), { recursive: true });

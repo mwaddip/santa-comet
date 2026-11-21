@@ -45,6 +45,7 @@ case "${1:-}" in
     cd "$fleet"
     pnpm install --no-frozen-lockfile
     pnpm --filter "santa-comet..." run build
+    pnpm --filter santa-comet typecheck   # src and test: test/harness/ is copied, and its consumers type-check it
     pnpm --filter santa-comet test
     ;;
   run)

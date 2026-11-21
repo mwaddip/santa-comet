@@ -62,18 +62,22 @@ export function readScope(runnerJson: string): Scope {
 /** A vector file, by its path relative to `vectors/` and the slice it sits in. */
 export interface VectorFile { rel: string; tier: string; version: string; provenance: string }
 
-/** Every `*.json` under `vectors/` but the root `grading.json`, sorted; a file at another depth is refused. */
+/** Every `*.json` under `vectors/` but the root `grading.json`, sorted; a file at another depth is refused. As the Rust
+ *  harness walks: a directory it cannot read is skipped, a symlinked directory is followed, and any other `*.json`
+ *  entry is listed (a dangling link among them fails loudly when it is read). */
 export function discover(vectors: string): VectorFile[] {
   const rels: string[] = [];
+  const isDir = (p: string): boolean => { try { return statSync(p).isDirectory(); } catch { return false; } };
   const walk = (dir: string, prefix: string): void => {
-    for (const name of readdirSync(dir)) {
+    let names: string[];
+    try { names = readdirSync(dir); } catch { return; }
+    for (const name of names) {
       const full = join(dir, name), rel = prefix ? `${prefix}/${name}` : name;
-      const st = statSync(full);
-      if (st.isDirectory()) walk(full, rel);
-      else if (st.isFile() && name.endsWith(".json") && rel !== "grading.json") rels.push(rel);
+      if (isDir(full)) walk(full, rel);
+      else if (name.endsWith(".json") && rel !== "grading.json") rels.push(rel);
     }
   };
-  try { statSync(vectors).isDirectory() && walk(vectors, ""); } catch { /* no vectors: nothing to select */ }
+  walk(vectors, "");
   rels.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
   return rels.map((rel) => {
     const p = rel.split("/");

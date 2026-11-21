@@ -33,11 +33,24 @@ describe("the grading parser refuses what santa-check refuses", () => {
     refused(minimal(`{"branches": []}`));
     refused(minimal(dims(`[{"name": "value", "compare": []}]`)));
   });
+  it("a nested unknown key", () =>
+    refused(minimal(dims(`[{"name": "value", "requries": [], "compare": [{"a": {"lit": 1}, "b": {"lit": 1}}]}]`))));
   it("a tier default naming no type", () =>
     refused(JSON.parse(`{"schema": "santa-grading/v1", "tiers": {"eval": "nope"}, "types": {}}`) as Json));
 });
 
 describe("grading", () => {
+  it("a vector file's own grading label wins over the tier's", () => {
+    const doc = minimal() as { types: Record<string, Json> };
+    doc.types.x = doc.types.eval;
+    const g = Grading.parse(doc as unknown as Json);
+    expect(g.labelFor("eval", { grading: "x" })).toBe("x");
+    expect(g.labelFor("eval", {})).toBe("eval");
+  });
+  it("a vector file's unknown grading label is refused", () => {
+    expect(() => Grading.parse(minimal()).labelFor("eval", { grading: "nope" })).toThrow(/nope/);
+  });
+
   const j = (s: string): Json => JSON.parse(s) as Json;
   it("structural equality: numbers numerically, bool only bool, objects key-order-free, arrays in order", () => {
     expect(structuralEqual(j("5"), j("5.0"))).toBe(true);
